@@ -1,0 +1,371 @@
+---
+title: 'Comparación umbrales pobreza: Nacional e Internacional'
+author: "Juandiego Huete Petisco y Borja Pantín Alonso"
+date: "2026-05-31"
+output:
+    tufte::tufte_html:
+    toc: true
+---
+
+
+install.packages("tufte", repos = "https://cloud.r-project.org")
+install.packages("tidyverse",dependencies=TRUE)
+install.packages("remotes")
+remotes::install_github("caldwellst/goalie")
+install.packages("plotly")
+install.packages("countrycode")
+install.packages("flextable")
+install.packages("tmap")
+install.packages("goalie")
+install.packages("wbstats")
+
+```{r setup, include=FALSE}
+library(tufte)
+library(tidyverse)
+library(goalie)
+library(tmap)
+library(ggplot2)
+library(knitr)
+library(wbstats)
+library(plotly)
+library(flextable)
+library(countrycode)
+```
+
+```{marginfigure}
+![](usal_en_hor.png)
+```
+
+# Introducción
+
+El objetivo de este trabajo es analizar los datos disponibles en el Banco Mundial sobre las tasas de pobreza a nivel mundial y examinar las diferencias, si las hubiera, entre la tasa de pobreza a nivel nacional y la tasa de pobreza a nivel internacional.
+
+Para ello, en este trabajo hemos decidido utilizar estas dos variables: la tasa de pobreza a nivel nacional (SI.POV.NAHC) y la tasa de pobreza a nivel internacional (SI.POV.DDAY). Además, hemos utilizado los datos del PIB per cápita (NY.GDP.PCAP.CD) y la variable de población (SP.POP.TOTL).
+
+Nuestra hipótesis principal es que los países con el PIB más alto son aquellos con el menor porcentaje de población pobre.
+
+No nos hemos centrado en ninguna zona específica, por lo que el marco geográfico que utilizamos es el mapa mundial completo. En cuanto al contexto temporal, hemos trabajado con todo el período de datos ofrecido por el Banco Mundial, es decir, desde 1980 hasta 2024, si bien nuestra intención ha sido utilizar los datos más recientes posibles para todos los países.
+
+
+```{r, include=FALSE}
+my_indicators <- c(
+  umbral_pobreza_internacional = "SI.POV.DDAY",
+  umbral_pobreza_nacional = "SI.POV.NAHC",
+  desnutrición = "SN.ITK.DEFC.ZS",
+  tasa_secundaria_inferior = "SE.SEC.CMPT.LO.ZS",
+  poblacion_barrios_marginales = "EN.POP.SLUM.UR.ZS",
+  PIB_capita ="NY.GDP.PCAP.CD", 
+  poblacion = "SP.POP.TOTL"
+  )
+
+```
+
+
+## Manipulación de los datos
+
+Para centrarnos mejor en nuestro tema principal, filtramos los datos de las dos variables relacionadas con la pobreza para conservar el último año con información disponible para ambas variables en la base de datos del Banco Mundial, eliminando así los datos faltantes de estas variables en nuestra investigación. A lo largo del trabajo, creamos tablas para comprender mejor los datos, ordenando los países según el mayor porcentaje de población por debajo del umbral de pobreza, tanto con las variables nacionales como internacionales, y con ambas simultáneamente; ordenándolos por áreas geográficas y observando cuál ofrece la mayor cantidad de datos para cada una, restando los datos obtenidos por la variable nacional de los obtenidos por la variable internacional, para así comprobar si existe una diferencia significativa. También creamos tablas donde aparece la variable PIB per cápita, para contrastar nuestra hipótesis.
+
+Para que el trabajo fuera más visual y los datos más fáciles de entender, creamos un mapa que muestra los porcentajes de población pobre en cada país mediante una escala de color del amarillo al morado. Existen varios mapas: uno para la variable a nivel nacional, otro para el nivel internacional y un tercero para la diferencia entre ambas variables.
+
+## Códigos de R
+
+```{r, include=TRUE}
+data_set <- wbstats::wb_data(my_indicators,)%>% 
+  left_join(wbstats::wb_countries() %>% select(-country), by="iso3c")
+```   
+
+```{r, include=TRUE}
+data_set %>% 
+  group_by(country) %>%
+  drop_na(umbral_pobreza_nacional) %>%
+  drop_na(umbral_pobreza_internacional) %>% 
+  drop_na(desnutrición) %>% 
+  drop_na(tasa_secundaria_inferior) %>% 
+  drop_na(poblacion_barrios_marginales)
+```
+
+```{r, include=TRUE}
+pobnac = data_set %>%
+     group_by(country) %>%
+     drop_na(umbral_pobreza_nacional) %>%
+     arrange(-date) %>% 
+     slice(1)  
+
+```
+
+```{r, include=TRUE}
+pobint = data_set %>%
+     group_by(country) %>%
+     drop_na(umbral_pobreza_internacional) %>%
+     arrange(-date) %>% 
+     slice(1) 
+
+```
+
+```{r, include=TRUE}
+pobmix = data_set %>%
+     group_by(country) %>%
+     drop_na(umbral_pobreza_internacional) %>%
+     drop_na(umbral_pobreza_nacional) %>%
+     arrange(-date) %>% 
+     slice(1) %>% 
+     mutate(difference = umbral_pobreza_nacional - umbral_pobreza_internacional)
+
+```
+
+```{r, include=TRUE}
+#"Países con el umbral de pobreza nacional más alto por región"
+pobna_reg = pobnac %>% 
+  left_join(codelist %>% rename(GeoAreaCode=iso3n)) %>% 
+  group_by(region) %>% 
+  slice_max(umbral_pobreza_nacional) %>% 
+  select(region,iso3c,country, umbral_pobreza_nacional, date) %>% 
+  arrange(-umbral_pobreza_nacional)
+
+pobna_reg %>%
+  ungroup()  %>%
+  mutate(date=as.integer(date)) %>%
+  flextable::flextable() %>%
+  flextable::colformat_double(digits = 2)
+
+```
+
+```{r, include=TRUE}
+#"Países con el umbral de pobreza internacional más alto por región"
+pobint_reg = pobint %>% 
+  left_join(codelist %>% rename(GeoAreaCode=iso3n)) %>% 
+  group_by(region) %>% 
+  slice_max(umbral_pobreza_internacional) %>% 
+  select(region,iso3c,country, umbral_pobreza_internacional, date) %>% 
+  arrange(-umbral_pobreza_internacional)
+  
+pobint_reg %>% 
+  ungroup()  %>%
+  mutate(date=as.integer(date)) %>%
+  flextable::flextable() %>%
+  flextable::colformat_double(digits = 2)
+
+```
+
+```{r, include=TRUE}
+#"Países con la mayor diferencia entre el umbral de pobreza nacional y el umbral de pobreza internacional, ordenados por región"
+pobmix_reg = pobmix %>% 
+  left_join(codelist %>% rename(GeoAreaCode=iso3n)) %>% 
+  group_by(region) %>% 
+  slice_max(difference) %>% 
+  select(region,iso3c,country, difference, date) %>% 
+  arrange(-difference)
+
+pobmix_reg %>% 
+    ungroup()  %>%
+  mutate(date=as.integer(date)) %>%
+  flextable::flextable() %>%
+  flextable::colformat_double(digits = 2)
+
+```
+
+```{r, include=TRUE}
+#"Países con el umbral de pobreza nacional más bajo por región"
+pobna_reg2 = pobnac %>% 
+  left_join(codelist %>% rename(GeoAreaCode=iso3n)) %>% 
+  group_by(region) %>% 
+  slice_min(umbral_pobreza_nacional) %>% 
+  select(region,iso3c,country, umbral_pobreza_nacional, date) %>% 
+  arrange(umbral_pobreza_nacional)
+
+pobna_reg2 %>% 
+  ungroup()  %>%
+  mutate(date=as.integer(date)) %>%
+  flextable::flextable() %>%
+  flextable::colformat_double(digits = 2)
+
+```
+
+```{r, include=TRUE}
+pobint_reg2 <- pobint %>%
+  left_join(codelist %>% rename(GeoAreaCode = iso3n)) %>%
+  group_by(region) %>%
+  arrange(
+    umbral_pobreza_internacional,
+    desc(date),
+    .by_group = TRUE
+  ) %>%
+  slice(1) %>%
+  select(region, iso3c, country,
+         umbral_pobreza_internacional, date)
+
+pobint_reg2 %>% 
+  ungroup()  %>%
+  mutate(date=as.integer(date)) %>%
+  flextable::flextable() %>%
+  flextable::colformat_double(digits = 2)
+```
+
+```{r, include=TRUE}
+#"Países con la menor diferencia entre el umbral de pobreza nacional y el umbral de pobreza internacional, ordenados por región"
+pobmix_reg2 = pobmix %>% 
+  left_join(codelist %>% rename(GeoAreaCode=iso3n)) %>% 
+  group_by(region) %>% 
+  slice_min(difference) %>% 
+  select(region,iso3c,country,difference, date) %>% 
+  arrange(difference)
+
+pobmix_reg2 %>% 
+  ungroup()  %>%
+  mutate(date=as.integer(date)) %>%
+  flextable::flextable() %>%
+  flextable::colformat_double(digits = 2)
+
+```
+
+En esta otra tabla podemos ver los países dentro de cada región que tienen el menor porcentaje de diferencia entre las variables nacionales e internacionales.
+
+```{r, include=TRUE}
+#"Countries with the highest national poverty line"
+pobna20L = pobnac %>%
+     group_by(region) %>%
+     ungroup() %>%
+     arrange(-umbral_pobreza_nacional) %>%
+     select(region,country,umbral_pobreza_nacional,date) %>%
+     slice(1:20)
+
+pobna20L %>%
+  ungroup()  %>%
+  mutate(date=as.integer(date)) %>%
+  flextable::flextable() %>%
+  flextable::colformat_double(digits = 2)
+```
+
+```{r, include=TRUE}
+#"Countries with the highest international poverty line"
+pobint20L = pobint %>%
+     group_by(region) %>%
+     ungroup() %>%
+     arrange(-umbral_pobreza_internacional) %>%
+     select(region,country,umbral_pobreza_internacional,date) %>%
+     slice(1:20)
+
+pobint20L %>%
+  ungroup()  %>%
+  mutate(date=as.integer(date)) %>%
+  flextable::flextable() %>%
+  flextable::colformat_double(digits = 2)
+
+```
+En las dos tablas siguientes vemos los países con el mayor porcentaje de pobreza en las dos variables, donde aunque hay alguna diferencia en los nombres y en las dos tablas no se ven los mismos países, es claro que África subsahariana predomina en ambas tablas.
+
+```{r, include=TRUE}
+#"Countries with the lowest national poverty line"
+pobna20W = pobnac %>%
+     group_by(region) %>%
+     ungroup() %>%
+     arrange(umbral_pobreza_nacional) %>%
+     select(region,country,umbral_pobreza_nacional,date) %>%
+     slice(1:15)
+
+pobna20W %>%
+  ungroup()  %>%
+  mutate(date=as.integer(date)) %>%
+  flextable::flextable() %>%
+  flextable::colformat_double(digits = 2)
+```
+
+```{r,include=TRUE}
+#"Countries with the lowest international poverty line"
+pobint20W = pobint %>%
+     group_by(region) %>%
+     ungroup() %>%
+     arrange(umbral_pobreza_internacional) %>%
+     select(region,country,umbral_pobreza_internacional,date) %>%
+     slice(1:15)
+
+pobint20W %>%
+  ungroup()  %>%
+  mutate(date=as.integer(date)) %>%
+  flextable::flextable() %>%
+  flextable::colformat_double(digits = 2)
+
+```
+
+```{r, include=TRUE}
+library(tmap)
+data(World)
+```
+
+Para poder mapear nuestros datos, tenemos que trasladarlos al `Mundo`. Veamos cómo:
+
+```{r, include=TRUE}
+map = World %>% 
+  filter(iso_a3 != "ATA") %>% 
+  left_join(pobnac %>% rename(iso_a3=iso3c) %>%      select(iso_a3,umbral_pobreza_nacional),
+     by="iso_a3")
+```
+
+```{r, include=TRUE}
+map %>% ggplot(aes(fill = umbral_pobreza_nacional)) +
+  geom_sf() +
+  scale_fill_viridis_c() +
+  theme(legend.position="bottom") +
+  labs(
+    title = "Mapa del umbral de pobreza nacional",
+    fill = NULL,
+    caption = paste("Fuente: World Bank") 
+  ) +
+   coord_sf()
+```
+
+```{r}
+map = World %>% 
+  filter(iso_a3 != "ATA") %>% 
+  left_join(pobint %>% rename(iso_a3=iso3c) %>%      select(iso_a3,country,umbral_pobreza_internacional),
+     by="iso_a3")
+```
+
+```{r}
+map %>% ggplot(aes(fill = umbral_pobreza_internacional)) +
+  geom_sf() +
+  scale_fill_viridis_c() +
+  theme(legend.position="bottom") +
+  labs(
+    title = "Mapa del umbral de pobreza internacional",
+    fill = NULL,
+    caption = paste("Fuente: World Bank") 
+  ) +
+   coord_sf()
+
+```
+
+```{r}
+map = World %>%
+  filter(iso_a3 != "ATA") %>%
+  left_join(pobmix %>% rename(iso_a3=iso3c) %>% select(iso_a3,country,difference),
+     by="iso_a3")
+
+```
+
+```{r}
+map %>% ggplot(aes(fill = difference)) +
+  geom_sf() +
+  scale_fill_viridis_c() +
+  theme(legend.position="bottom") +
+  labs(
+    title = "Mapa de la diferencia entre el umbral de la pobreza nacional e internacional",
+    fill = NULL,
+    caption = paste("Fuente: World Bank")
+  ) +
+   coord_sf()
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
