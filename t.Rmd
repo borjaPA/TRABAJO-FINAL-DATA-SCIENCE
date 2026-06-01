@@ -3,10 +3,8 @@ title: 'Comparación umbrales pobreza: Nacional e Internacional'
 author: "Juandiego Huete Petisco y Borja Pantín Alonso"
 date: "2026-05-31"
 output:
-    tufte::tufte_html:
-    css: style.css
     html_document:
-    toc: true
+    css: style.css
 ---
 
 
@@ -52,7 +50,7 @@ Nuestra hipótesis principal es que los países con el PIB más alto son aquello
 No nos hemos centrado en ninguna zona específica, por lo que el marco geográfico que utilizamos es el mapa mundial completo. En cuanto al contexto temporal, hemos trabajado con todo el período de datos ofrecido por el Banco Mundial, es decir, desde 1980 hasta 2024, si bien nuestra intención ha sido utilizar los datos más recientes posibles para todos los países.
 
 
-```{r, include=FALSE}
+```{r}
 my_indicators <- c(
   umbral_pobreza_internacional = "SI.POV.DDAY",
   umbral_pobreza_nacional = "SI.POV.NAHC",
@@ -62,9 +60,7 @@ my_indicators <- c(
   PIB_capita ="NY.GDP.PCAP.CD", 
   poblacion = "SP.POP.TOTL"
   )
-
 ```
-
 
 ## Manipulación de los datos
 
@@ -72,7 +68,9 @@ Para centrarnos mejor en nuestro tema principal, filtramos los datos de las dos 
 
 Para que el trabajo fuera más visual y los datos más fáciles de entender, creamos un mapa que muestra los porcentajes de población pobre en cada país mediante una escala de color del amarillo al morado. Existen varios mapas: uno para la variable a nivel nacional, otro para el nivel internacional y un tercero para la diferencia entre ambas variables.
 
-## Códigos de R
+### Preparación de datos
+
+Lo primero es preparar nuestros datos para poder operar con ellos.
 
 ```{r}
 data_set <- wbstats::wb_data(my_indicators,)%>% 
@@ -89,13 +87,18 @@ data_set %>%
   drop_na(poblacion_barrios_marginales)
 ```
 
+## Visualización de los datos
+
+Una vez hemos realizado este paso, hacemos una primera inmersión para conocer los datos, una especie de resumen como los que hemos hecho en clase con `head()` y `tail()`, pero más trabajada.
+
+### Países con más porcentaje de población pobre, por región.
+
 ```{r}
 pobnac = data_set %>%
      group_by(country) %>%
      drop_na(umbral_pobreza_nacional) %>%
      arrange(-date) %>% 
      slice(1)  
-
 ```
 
 ```{r}
@@ -104,7 +107,6 @@ pobint = data_set %>%
      drop_na(umbral_pobreza_internacional) %>%
      arrange(-date) %>% 
      slice(1) 
-
 ```
 
 ```{r}
@@ -115,7 +117,6 @@ pobmix = data_set %>%
      arrange(-date) %>% 
      slice(1) %>% 
      mutate(difference = umbral_pobreza_nacional - umbral_pobreza_internacional)
-
 ```
 
 ```{r}
@@ -126,17 +127,15 @@ pobna_reg = pobnac %>%
   select(region,iso3c,country, umbral_pobreza_nacional, date) %>% 
   arrange(-umbral_pobreza_nacional)
 
-pobna_reg %>%
+tab_pvnc_reg <- pobna_reg %>%
   ungroup()  %>%
   mutate(date=as.integer(date)) %>%
   flextable::flextable() %>%
-  flextable::colformat_double(digits = 2)
-flextable::set_caption("Países con mayor porcentaje de población pobre (V. Nacional")
-
+  flextable::colformat_double(digits = 2) %>% 
+flextable::set_caption("Países con mayor porcentaje de población pobre (V. Nacional), por región")
 ```
 
 ```{r}
-#"Países con el umbral de pobreza internacional más alto por región"
 pobint_reg = pobint %>% 
   left_join(codelist %>% rename(GeoAreaCode=iso3n)) %>% 
   group_by(region) %>% 
@@ -144,16 +143,15 @@ pobint_reg = pobint %>%
   select(region,iso3c,country, umbral_pobreza_internacional, date) %>% 
   arrange(-umbral_pobreza_internacional)
   
-pobint_reg %>% 
+tab_pvint_reg <- pobint_reg %>% 
   ungroup()  %>%
   mutate(date=as.integer(date)) %>%
   flextable::flextable() %>%
-  flextable::colformat_double(digits = 2)
-
+  flextable::colformat_double(digits = 2) %>% 
+flextable::set_caption("Países con mayor porcentaje de población pobre (V. Internacional), por región")
 ```
 
 ```{r}
-#"Países con la mayor diferencia entre el umbral de pobreza nacional y el umbral de pobreza internacional, ordenados por región"
 pobmix_reg = pobmix %>% 
   left_join(codelist %>% rename(GeoAreaCode=iso3n)) %>% 
   group_by(region) %>% 
@@ -161,13 +159,23 @@ pobmix_reg = pobmix %>%
   select(region,iso3c,country, difference, date) %>% 
   arrange(-difference)
 
-pobmix_reg %>% 
+tab_pvmix_reg <- pobmix_reg %>% 
     ungroup()  %>%
   mutate(date=as.integer(date)) %>%
   flextable::flextable() %>%
-  flextable::colformat_double(digits = 2)
-
+  flextable::colformat_double(digits = 2) %>% 
+  flextable::set_caption("Países con mayor diferencia entre el indicador nacional e Internacional, por región")
 ```
+
+El resultado de esto son estas 3 tablas, que nos muestran cuáles son los países por cada región con mayor porcentaje de población viviendo por debajo del umbral de pobreza, según los indicadores nacionales e internacionales; la última tabla nos muestra los países donde se observan mayores diferencias en el porcentaje de población pobre entre los indicadores nacionales e internacionales.
+
+```{r, echo=FALSE}
+tab_pvnc_reg
+tab_pvint_reg
+tab_pvmix_reg
+```
+
+### Países con menos porcentaje de población pobre, por región.
 
 ```{r}
 pobna_reg2 = pobnac %>% 
@@ -177,13 +185,12 @@ pobna_reg2 = pobnac %>%
   select(region,iso3c,country, umbral_pobreza_nacional, date) %>% 
   arrange(umbral_pobreza_nacional)
 
-pobna_reg2 %>% 
+tab_pvna_reg2 <- pobna_reg2 %>% 
   ungroup()  %>%
   mutate(date=as.integer(date)) %>%
   flextable::flextable() %>%
-  flextable::colformat_double(digits = 2)
-flextable::set_caption("Países con < % de población pobre (variable nacional) por región")
-
+  flextable::colformat_double(digits = 2) %>% 
+flextable::set_caption("Países con menor porcentaje de población pobre (variable nacional) por región")
 ```
 
 ```{r}
@@ -199,12 +206,12 @@ pobint_reg2 <- pobint %>%
   select(region, iso3c, country,
          umbral_pobreza_internacional, date)
 
-pobint_reg2 %>% 
+tab_pvint_reg2 <- pobint_reg2 %>% 
   ungroup()  %>%
   mutate(date=as.integer(date)) %>%
   flextable::flextable() %>%
-  flextable::colformat_double(digits = 2)
-flextable::set_caption("Países con < % de población pobre (variable internacional) por región")
+  flextable::colformat_double(digits = 2) %>% 
+flextable::set_caption("Países con menor porcentaje de población pobre (variable internacional) por región")
 ```
 
 ```{r}
@@ -215,19 +222,25 @@ pobmix_reg2 = pobmix %>%
   select(region,iso3c,country,difference, date) %>% 
   arrange(difference)
 
-pobmix_reg2 %>% 
+tab_pvmix_reg2 <- pobmix_reg2 %>% 
   ungroup()  %>%
   mutate(date=as.integer(date)) %>%
   flextable::flextable() %>%
-  flextable::colformat_double(digits = 2)
+  flextable::colformat_double(digits = 2) %>% 
 flextable::set_caption("Países con menor diferencia entre variable nacional e internacional por región")
-
 ```
 
-En esta otra tabla podemos ver los países dentro de cada región que tienen el menor porcentaje de diferencia entre las variables nacionales e internacionales.
+Con las siguientes 3 tablas observamos el caso contrario, los países por región que presentan menor porcentaje de población pobre según los indicadores nacionales e internacionales, además de aquellos donde las diferencias entre ambos indicadores son más amplias. Siempre que hubiera un empate entre países de la misma región, se ha escogido el último dato disponible.
+
+```{r, echo=FALSE}
+tab_pvna_reg2
+tab_pvint_reg2
+tab_pvmix_reg2
+```
+
+### Países con mayor porcentaje de población pobre
 
 ```{r}
-#"Países con la mayor tasa de población por debajo del umbral nacional de pobreza"
 pobna20L = pobnac %>%
      group_by(region) %>%
      ungroup() %>%
@@ -235,15 +248,15 @@ pobna20L = pobnac %>%
      select(region,country,umbral_pobreza_nacional,date) %>%
      slice(1:20)
 
-pobna20L %>%
+tab_pvna_H <- pobna20L %>%
   ungroup()  %>%
   mutate(date=as.integer(date)) %>%
   flextable::flextable() %>%
-  flextable::colformat_double(digits = 2)
+  flextable::colformat_double(digits = 2) %>% 
+  flextable::set_caption("Países con más % de población por debajo del umbral nacional de pobreza")
 ```
 
 ```{r}
-#"Países con la mayor tasa de población por debajo del umbral internacional de pobreza"
 pobint20L = pobint %>%
      group_by(region) %>%
      ungroup() %>%
@@ -251,17 +264,25 @@ pobint20L = pobint %>%
      select(region,country,umbral_pobreza_internacional,date) %>%
      slice(1:20)
 
-pobint20L %>%
+tab_pvint_H <- pobint20L %>%
   ungroup()  %>%
   mutate(date=as.integer(date)) %>%
   flextable::flextable() %>%
-  flextable::colformat_double(digits = 2)
-
+  flextable::colformat_double(digits = 2) %>% 
+  flextable::set_caption("Países con más % de población por debajo del umbral internacional de pobreza")
 ```
-En las dos tablas siguientes vemos los países con el mayor porcentaje de pobreza en las dos variables, donde aunque hay alguna diferencia en los nombres y en las dos tablas no se ven los mismos países, es claro que África subsahariana predomina en ambas tablas.
+
+En las dos tablas siguientes vemos los países con el mayor porcentaje de pobreza en las dos variables donde, aunque hay alguna diferencia en los nombres y en las dos tablas no se ven los mismos países, es claro que África subsahariana predomina en ambas tablas.
+
+```{r, echo=FALSE}
+tab_pvna_H
+tab_pvint_H
+```
+
+### Países con menor porcentaje de población pobre.
 
 ```{r}
-#"Países con la menor tasa de población por debajo del umbral nacional de pobreza"
+#
 pobna20W = pobnac %>%
      group_by(region) %>%
      ungroup() %>%
@@ -269,15 +290,15 @@ pobna20W = pobnac %>%
      select(region,country,umbral_pobreza_nacional,date) %>%
      slice(1:15)
 
-pobna20W %>%
+tab_pvna_L <- pobna20W %>%
   ungroup()  %>%
   mutate(date=as.integer(date)) %>%
   flextable::flextable() %>%
-  flextable::colformat_double(digits = 2)
+  flextable::colformat_double(digits = 2) %>% 
+  flextable::set_caption("Países con menos % de población por debajo del umbral nacional de pobreza")
 ```
 
 ```{r}
-#"Países con la menor tasa de población por debajo del umbral internacional de pobreza"
 pobint20W = pobint %>%
      group_by(region) %>%
      ungroup() %>%
@@ -285,20 +306,29 @@ pobint20W = pobint %>%
      select(region,country,umbral_pobreza_internacional,date) %>%
      slice(1:15)
 
-pobint20W %>%
+tab_pvint_L <- pobint20W %>%
   ungroup()  %>%
   mutate(date=as.integer(date)) %>%
   flextable::flextable() %>%
-  flextable::colformat_double(digits = 2)
-
+  flextable::colformat_double(digits = 2) %>% 
+  flextable::set_caption("Países con menos % de población por debajo del umbral internacional de pobreza")
 ```
+
+En estas dos tablas se muestran los países que menos porcentaje de población tienen viviendo por debajo del umbral de la pobreza, según el indicador nacional e internacional.
+
+```{r, echo=FALSE}
+tab_pvna_H
+tab_pvint_H
+```
+
+## Gráficos de mapa mundial.
+
+Para poder mapear nuestros datos, tenemos que trasladarlos al `Mundo`. Veamos cómo:
 
 ```{r}
 library(tmap)
 data(World)
 ```
-
-Para poder mapear nuestros datos, tenemos que trasladarlos al `Mundo`. Veamos cómo:
 
 ```{r}
 map = World %>% 
@@ -307,13 +337,15 @@ map = World %>%
      by="iso_a3")
 ```
 
+Se mostrarán los datos obtenidos a través del World Bank en forma de mapa, con una leyenda en colores que nos mostrará cuánto porcentaje de población vive por debajo del umbral de la pobreza, medido según el indicador correspondiente, en cada país. También se ha creado un mapa que muestre los países que más diferencias presentan entre las pobrezas viviendo en pobreza según el indicador nacional el internacional.
+
 ```{r}
 map %>% ggplot(aes(fill = umbral_pobreza_nacional)) +
   geom_sf() +
   scale_fill_viridis_c() +
   theme(legend.position="bottom") +
   labs(
-    title = "Mapa de población viviendo por debajo del umbral de pobreza nacional",
+    title = "% de población viviendo por debajo del umbral de pobreza nacional",
     fill = NULL,
     caption = paste("Fuente: World Bank") 
   ) +
@@ -333,12 +365,11 @@ map %>% ggplot(aes(fill = umbral_pobreza_internacional)) +
   scale_fill_viridis_c() +
   theme(legend.position="bottom") +
   labs(
-    title = "Mapa de población viviendo por debajo del umbral de pobreza internacional",
+    title = "% de población viviendo por debajo del umbral de pobreza internacional",
     fill = NULL,
     caption = paste("Fuente: World Bank") 
   ) +
    coord_sf()
-
 ```
 
 ```{r}
@@ -346,7 +377,6 @@ map = World %>%
   filter(iso_a3 != "ATA") %>%
   left_join(pobmix %>% rename(iso_a3=iso3c) %>% select(iso_a3,country,difference),
      by="iso_a3")
-
 ```
 
 ```{r}
@@ -360,35 +390,39 @@ map %>% ggplot(aes(fill = difference)) +
     caption = paste("Fuente: World Bank")
   ) +
    coord_sf()
-
 ```
 
-Las dos tablas siguientes nos muestran, una, el país con el mayor porcentaje de pobreza en cada región junto a su cifra de PIB; y la otra lo mismo pero con tasas más bajas.
+### Añadimos la variable PIB
 
 ```{r}
-pobint %>%
+tab_PIB_H <- pobint %>%
   group_by(region) %>% 
   arrange(umbral_pobreza_internacional) %>% 
   slice(1) %>% 
   select(region,country,PIB_capita) %>%  flextable::flextable() %>% 
-  flextable::colformat_double(digits = 0)
-  
+  flextable::colformat_double(digits = 0) %>% 
+   flextable::set_caption("Países con más % de población por debajo del umbral nacional de pobreza según PIB")
 ```
 
 ```{r}
-pobint %>%
+tab_PIB_L <- pobint %>%
   group_by(region) %>% 
   arrange(-umbral_pobreza_internacional) %>% 
   slice(1) %>% 
   select(region,country,PIB_capita) %>%  flextable::flextable() %>% 
-  flextable::colformat_double(digits = 0)
-  
+  flextable::colformat_double(digits = 0) %>% 
+  flextable::set_caption("Países con menos % de población por debajo del umbral nacional de pobreza según PIB")
 ```
 
-La siguiente tabla muestra el promedio ponderado y el promedio simplificado de las tasas de pobreza en las regiones del mundo, junto con la población de cada región en esa situación, para la variable nacional; como los datos de cada país han sido recogidos en periodos distintos no es posible mostrar el año por región. La siguiente tabla es la misma, pero para la variable internacional.
+Las dos tablas siguientes nos muestran, una, el país con el mayor porcentaje de pobreza en cada región junto a su cifra de PIB; y la otra lo mismo pero con las tasas más bajas.
+
+```{r, echo=FALSE}
+tab_PIB_H
+tab_PIB_L
+```
 
 ```{r}
-pobnac %>% 
+tab_nac_wght <- pobnac %>% 
   group_by(region) %>%  
   drop_na(poblacion) %>%      
   summarize(`Promedio ponderado`=weighted.mean(umbral_pobreza_nacional,poblacion,na.rm=TRUE),
@@ -398,11 +432,12 @@ pobnac %>%
  `Población (en millones)`=sum(poblacion)/1e6
             ) %>%      
   arrange(`Promedio ponderado`) %>% flextable::flextable() %>% 
-  flextable::colformat_double(digits = 2) 
+  flextable::colformat_double(digits = 2) %>% 
+  flextable::set_caption("Promedio, ponderado y simplificado, del % de pobreza (V. Nacional) por región")
 ```
 
 ```{r}
-pobint %>% 
+tab_int_wght <- pobint %>% 
   group_by(region) %>%  
   drop_na(poblacion) %>%      
   summarize(`Promedio ponderado`=weighted.mean(umbral_pobreza_internacional,poblacion,na.rm=TRUE),
@@ -412,8 +447,18 @@ pobint %>%
  `Población (en millones)`=sum(poblacion)/1e6
             ) %>%      
   arrange(`Promedio ponderado`) %>% flextable::flextable() %>% 
-  flextable::colformat_double(digits = 2) 
+  flextable::colformat_double(digits = 2) %>% 
+   flextable::set_caption("Promedio, ponderado y simplificado, del % de pobreza (V. Internacional) por región")
 ```
+
+Las siguientes tablas muestran el promedio ponderado y el promedio simplificado de los porcentajes de pobreza en las regiones del mundo, junto con la población de cada región en esa situación, para la variable nacional e internacional. Como los datos de cada país han sido recogidos en periodos distintos no es posible mostrar el año por región.
+
+```{r, echo=FALSE}
+tab_nac_wght
+tab_int_wght
+```
+
+El gráfico que se muestra aquí representa la comparación entre las dos variables, donde se aprecian claramente las grandes diferencias que hemos encontrado a lo largo de este trabajo. Vemos, por ejemplo, que Asia Oriental y el Pacífico es la región con menor población pobre y, al mismo tiempo, con menor diferencia entre las variables. Algo similar ocurre con la región de África Subsahariana, donde encontramos mayor consenso entre las dos variables, y ambas coinciden en que es la región más afectada por este problema.
 
 ```{r}
 pobmix %>% 
@@ -443,16 +488,13 @@ pobmix %>%
     size = "Población",
     color = NULL,
     caption = "Fuente: World Bank"
-   
   ) 
-              
-  
 ```
 
-El gráfico que se muestra aquí representa la comparación entre las dos variables, donde se aprecian claramente las grandes diferencias que hemos encontrado a lo largo de este trabajo. Vemos, por ejemplo, que Asia Oriental y el Pacífico es la región con menor población pobre y, al mismo tiempo, con menor diferencia entre las variables. Algo similar ocurre con la región de África Subsahariana, donde encontramos mayor consenso entre las dos variables, y ambas coinciden en que es la región más afectada por este problema.
+### % de población pobre según PIB per cápita.
 
 ```{r}
-pobmix %>%
+graf1 <- pobmix %>%
   ggplot(aes(
       x = PIB_capita, 
       y = umbral_pobreza_nacional
@@ -480,7 +522,7 @@ pobmix %>%
 ```
 
 ```{r}
-pobmix %>%
+graf2 <- pobmix %>%
   ggplot(aes(
       x = PIB_capita, 
       y = umbral_pobreza_internacional
@@ -507,6 +549,13 @@ pobmix %>%
   ) 
 ```
 
+Los siguientes gráficos nos muestran la relación entre el PIB per cápita y el porcentaje de población pobre de un país.
+
+```{r, echo=FALSE}
+graf1
+graf2
+```
+
 Los siguientes 3 chunks de código son una preparación para visualizar los datos del resto de nuestras variables comparándolos con los datos de población por debajo del umbral internacional de pobreza, para ver si existe relación.
 
 ```{r}
@@ -516,7 +565,6 @@ por_desnutricion = data_set %>%
      drop_na(desnutrición) %>%
      arrange(-date) %>% 
      slice(1)
-
 ```
 
 ```{r}
@@ -526,7 +574,6 @@ acabar_secundaria = data_set %>%
      drop_na(tasa_secundaria_inferior) %>%
      arrange(-date) %>% 
      slice(1)
-
 ```
 
 ```{r}
@@ -536,13 +583,12 @@ barrios_marginales = data_set %>%
      drop_na(poblacion_barrios_marginales) %>%
      arrange(-date) %>% 
      slice(1)
-
 ```
 
-Veremos ahora cómo se relacionan estos datos:
+Veremos ahora gráficamente cómo se relacionan estos datos:
 
 ```{r}
-por_desnutricion %>%
+graf3 <- por_desnutricion %>%
   ggplot(aes(
       x = umbral_pobreza_internacional, 
       y = desnutrición
@@ -563,11 +609,10 @@ por_desnutricion %>%
     color = NULL,
     caption = "Fuente: World Bank"
   ) 
-
 ```
 
 ```{r}
-acabar_secundaria %>%
+graf4 <- acabar_secundaria %>%
   ggplot(aes(
       x = umbral_pobreza_internacional , 
       y = tasa_secundaria_inferior
@@ -588,11 +633,10 @@ acabar_secundaria %>%
     color = NULL,
     caption = "Fuente: World Bank"
   ) 
-
 ```
 
 ```{r}
-barrios_marginales %>%
+graf5 <- barrios_marginales %>%
   ggplot(aes(
       x = umbral_pobreza_internacional, 
       y = poblacion_barrios_marginales
@@ -613,7 +657,12 @@ barrios_marginales %>%
     color = NULL,
     caption = "Fuente: World Bank"
   ) 
+```
 
+```{r, echo=FALSE}
+graf3
+graf4
+graf5
 ```
 
 Haremos lo mismo ahora, pero para comparar estos datos con el porcentaje de población en cada país que vive por debajo del umbral nacional de pobreza
@@ -625,7 +674,6 @@ por_desnutricion2 = data_set %>%
      drop_na(desnutrición) %>%
      arrange(-date) %>% 
      slice(1)
-
 ```
 
 ```{r}
@@ -635,7 +683,6 @@ acabar_secundaria2 = data_set %>%
      drop_na(tasa_secundaria_inferior) %>%
      arrange(-date) %>% 
      slice(1)
-
 ```
 
 ```{r}
@@ -645,7 +692,6 @@ barrios_marginales2 = data_set %>%
      drop_na(poblacion_barrios_marginales) %>%
      arrange(-date) %>% 
      slice(1)
-
 ```
 
 ```{r}
@@ -670,7 +716,6 @@ por_desnutricion2 %>%
     color = NULL,
     caption = "Fuente: World Bank"
   ) 
-
 ```
 
 ```{r}
@@ -696,7 +741,6 @@ acabar_secundaria2 %>%
     color = NULL,
     caption = "Fuente: World Bank"
   ) 
-
 ```
 
 ```{r}
@@ -721,59 +765,4 @@ barrios_marginales2 %>%
     color = NULL,
     caption = "Fuente: World Bank"
   ) 
-
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
