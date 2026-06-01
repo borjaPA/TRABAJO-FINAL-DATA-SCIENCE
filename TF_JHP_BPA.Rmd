@@ -34,7 +34,11 @@ library(countrycode)
 library(patchwork)
 ```
 
-![](usal_en_honor.png){width=200px}
+```{r}
+<center>
+<img src="usal_en_honor.png" width="200">
+</center>
+```
 
 # Introducción
 
@@ -169,11 +173,7 @@ El resultado de esto son estas 3 tablas, que nos muestran cuáles son los paíse
 
 ```{r, echo=FALSE}
 tab_pvnc_reg
-
-
 tab_pvint_reg
-
-
 tab_pvmix_reg
 ```
 
@@ -236,11 +236,7 @@ Con las siguientes 3 tablas observamos el caso contrario, los países por regió
 
 ```{r, echo=FALSE}
 tab_pvna_reg2
-
-
 tab_pvint_reg2
-
-
 tab_pvmix_reg2
 ```
 
@@ -282,8 +278,6 @@ En las dos tablas siguientes vemos los países con el mayor porcentaje de pobrez
 
 ```{r, echo=FALSE}
 tab_pvna_H
-
-
 tab_pvint_H
 ```
 
@@ -326,8 +320,6 @@ En estas dos tablas se muestran los países que menos porcentaje de población t
 
 ```{r, echo=FALSE}
 tab_pvna_H
-
-
 tab_pvint_H
 ```
 
@@ -428,8 +420,6 @@ Las dos tablas siguientes nos muestran, una, el país con el mayor porcentaje de
 
 ```{r, echo=FALSE}
 tab_PIB_H
-
-
 tab_PIB_L
 ```
 
@@ -467,8 +457,6 @@ Las siguientes tablas muestran el promedio ponderado y el promedio simplificado 
 
 ```{r, echo=FALSE}
 tab_nac_wght
-
-
 tab_int_wght
 ```
 
@@ -567,8 +555,6 @@ Los siguientes gráficos nos muestran la relación entre el PIB per cápita y el
 
 ```{r, echo=FALSE}
 graf1
-
-
 graf2
 ```
 
@@ -678,11 +664,7 @@ Veremos ahora gráficamente cómo se relacionan estos datos:
 
 ```{r, echo=FALSE}
 graf3
-
-
 graf4
-
-
 graf5
 ```
 
@@ -788,14 +770,8 @@ graf8 <- barrios_marginales2 %>%
   ) 
 ```
 
-Y aquí vemos los gráficos:
-
-```{r, echo=FALSE}
+```{r}
 graf6
-
-
 graf7
-
-
 graf8
 ```
