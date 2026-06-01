@@ -8,6 +8,10 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+if (!require("ggridges")) install.packages("ggridges")
+if (!require("gganimate")) install.packages("gganimate")
+if (!require("gifski")) install.packages("gifski")
+library(ggridges)
 library(tufte)
 library(tidyverse)
 library(goalie)
@@ -19,6 +23,8 @@ library(plotly)
 library(flextable)
 library(countrycode)
 library(patchwork)
+library(gganimate)
+library(gifski)
 ```
 
 ![](USAL.png){width=75%}
@@ -852,8 +858,6 @@ Por último, para cerrar el presente trabajo, hemos diseñado un mapa interactiv
 
 ```{r}
 tmap_mode("view")  
-
-library(tmap)
 data("World")
 
 data_mapa <- World %>%
@@ -878,7 +882,6 @@ tm_shape(data_mapa) +
 ```
 
 ```{r}
-library(gganimate)
 
 data_set %>%
   drop_na(PIB_capita, umbral_pobreza_internacional, poblacion) %>%
