@@ -7,19 +7,6 @@ output:
     css: style.css
 ---
 
-
-install.packages("tufte", repos = "https://cloud.r-project.org")
-install.packages("tidyverse",dependencies=TRUE)
-install.packages("remotes")
-remotes::install_github("caldwellst/goalie")
-install.packages("plotly")
-install.packages("countrycode")
-install.packages("flextable")
-install.packages("tmap")
-install.packages("goalie")
-install.packages(patchwork)
-install.packages("wbstats")
-
 ```{r setup, include=FALSE}
 library(tufte)
 library(tidyverse)
@@ -34,7 +21,7 @@ library(countrycode)
 library(patchwork)
 ```
 
-![](USAL.png){width=200px}
+![](USAL.png){width=75%}
 
 # Introducción
 
@@ -331,6 +318,33 @@ tab_pvna_H
 tab_pvint_H
 ```
 
+También hemos hecho unos histogramas con la evolución de la variable internacional y nacional de pobreza
+
+```{r}
+his1 <- data_set %>%
+  group_by(region, date) %>%
+  summarize(media = mean(umbral_pobreza_internacional, na.rm = TRUE)) %>%
+  ggplot(aes(x = date, y = media, color = region)) +
+  geom_line() +
+  theme_minimal()
+```
+
+```{r}
+his2 <- data_set %>%
+  group_by(region, date) %>%
+  summarize(media = mean(umbral_pobreza_nacional, na.rm = TRUE)) %>%
+  ggplot(aes(x = date, y = media, color = region)) +
+  geom_line() +
+  theme_minimal()
+```
+
+```{r, echo=FALSE}
+his1
+
+
+his2
+```
+
 ## Gráficos de mapa mundial.
 
 Para poder mapear nuestros datos, tenemos que trasladarlos al `Mundo`. Veamos cómo:
@@ -566,10 +580,10 @@ graf2 <- pobmix %>%
 Los siguientes gráficos nos muestran la relación entre el PIB per cápita y el porcentaje de población pobre de un país.
 
 ```{r, echo=FALSE}
-graf1
+ggplotly(graf1)
 
 
-graf2
+ggplotly(graf2) 
 ```
 
 Los siguientes chunks de código son una preparación para visualizar los datos del resto de nuestras variables comparándolos con los datos de población por debajo del umbral internacional de pobreza, para ver si existe relación.
@@ -677,13 +691,13 @@ graf5 <- barrios_marginales %>%
 Veremos ahora gráficamente cómo se relacionan estos datos:
 
 ```{r, echo=FALSE}
-graf3
+ggplotly(graf3)
 
 
-graf4
+ggplotly(graf4)
 
 
-graf5
+ggplotly(graf5)
 ```
 
 Haremos lo mismo ahora, pero para comparar estos datos con el porcentaje de población en cada país que vive por debajo del umbral nacional de pobreza
@@ -791,11 +805,49 @@ graf8 <- barrios_marginales2 %>%
 Y aquí vemos los gráficos:
 
 ```{r, echo=FALSE}
-graf6
+ggplotly(graf6)
 
 
-graf7
+ggplotly(graf7)
 
 
-graf8
+ggplotly(graf8)
+```
+
+## Mapa interactivo
+
+Por último, para cerrar el presente trabajo, hemos diseñado un mapa interactivo que te permite ver en el mapa los porcentajes de población pobre según los umbrales nacionales e internacionales, así como la diferencia entre estos
+
+```{r}
+tmap_mode("view")  
+
+library(tmap)
+data("World")
+
+data_mapa <- World %>%
+  left_join(
+    pobmix %>% ungroup() %>% select(iso3c, umbral_pobreza_nacional, 
+                                     umbral_pobreza_internacional, difference),
+    by = c("iso_a3" = "iso3c")
+  )
+
+tmap_mode("view") 
+
+tm_shape(data_mapa) +
+  tm_polygons(
+    col = "umbral_pobreza_internacional",
+    palette = "YlOrRd",
+    title = "% pobreza internacional",
+    popup.vars = c("País" = "name", 
+                   "Pobreza internacional" = "umbral_pobreza_internacional",
+                   "Pobreza nacional" = "umbral_pobreza_nacional",
+                   "Diferencia" = "difference")
+  )
+```
+
+```{r, echo=FALSE}
+
+#Creo que así vuelve el mapa a estático.
+
+tmap_mode("plot")
 ```
