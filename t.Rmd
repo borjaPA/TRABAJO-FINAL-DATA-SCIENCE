@@ -34,7 +34,7 @@ library(countrycode)
 library(patchwork)
 ```
 
-![](usal_en_honor.png){width=200px}
+![](USAL.png){width=200px}
 
 # Introducción
 
